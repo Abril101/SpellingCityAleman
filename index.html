@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>German Spelling City</title>
+<style>
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont;
+  background: #f4f6f8;
+  margin: 0;
+  padding: 0;
+}
+
+.container {
+  max-width: 600px;
+  margin: 40px auto;
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+h1 {
+  text-align: center;
+}
+
+input {
+  width: 100%;
+  padding: 12px;
+  margin-top: 10px;
+  font-size: 16px;
+}
+
+button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 15px;
+  font-size: 16px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+button.secondary {
+  background: #6b7280;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+.hidden {
+  display: none;
+}
+
+.feedback {
+  margin-top: 10px;
+  font-weight: bold;
+}
+
+.correct { color: green; }
+.incorrect { color: red; }
+
+.word-counter {
+  text-align: center;
+  margin-top: 10px;
+  color: #555;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>🇩🇪 German Spelling City</h1>
+
+<!-- SETUP -->
+<div id="setup">
+  <p>Introduce tus palabras:</p>
+  <div id="wordInputs"></div>
+  <button onclick="addWordInput()">➕ Añadir palabra</button>
+  <button onclick="startTest()">Empezar dictado</button>
+</div>
+
+<!-- TEST -->
+<div id="test" class="hidden">
+  <button onclick="playAudio()">🔊 Escuchar palabra</button>
+  <input id="answer" placeholder="Escribe aquí…" autofocus />
+  <button onclick="checkAnswer()">Confirmar</button>
+  <div id="feedback" class="feedback"></div>
+  <div class="word-counter" id="counter"></div>
+</div>
+
+<!-- END -->
+<div id="end" class="hidden">
+  <h2>🎉 Sesión terminada</h2>
+  <button onclick="restart()">Practicar errores</button>
+  <button class="secondary" onclick="goHome()">Volver al inicio</button>
+</div>
+
+</div>
+
+<script>
+let words = [];
+let errors = [];
+let currentWord = "";
+let index = 0;
+
+// ---------- SETUP ----------
+function addWordInput(value = "") {
+  const container = document.getElementById("wordInputs");
+  const input = document.createElement("input");
+  input.placeholder = "Ej: der Freund";
+  input.value = value;
+  container.appendChild(input);
+  saveWords();
+}
+
+function saveWords() {
+  const values = [...document.querySelectorAll("#wordInputs input")]
+    .map(i => i.value)
+    .filter(v => v.trim() !== "");
+  localStorage.setItem("germanWords", JSON.stringify(values));
+}
+
+function loadWords() {
+  const saved = JSON.parse(localStorage.getItem("germanWords") || "[]");
+  if (saved.length === 0) addWordInput();
+  saved.forEach(w => addWordInput(w));
+}
+
+// ---------- TEST ----------
+function startTest() {
+  saveWords();
+  words = JSON.parse(localStorage.getItem("germanWords") || "[]");
+  if (words.length === 0) return;
+
+  errors = [];
+  index = 0;
+
+  document.getElementById("setup").classList.add("hidden");
+  document.getElementById("test").classList.remove("hidden");
+
+  nextWord();
+}
+
+function playAudio() {
+  const u = new SpeechSynthesisUtterance(currentWord);
+  u.lang = "de-DE";
+  speechSynthesis.speak(u);
+}
+
+function nextWord() {
+  if (index >= words.length) {
+    endSession();
+    return;
+  }
+  currentWord = words[index];
+  document.getElementById("answer").value = "";
+  document.getElementById("feedback").textContent = "";
+  document.getElementById("counter").textContent =
+    `Palabra ${index + 1} de ${words.length}`;
+  playAudio();
+}
+
+function checkAnswer() {
+  const input = document.getElementById("answer").value.trim();
+  const fb = document.getElementById("feedback");
+
+  if (input === currentWord) {
+    fb.textContent = "✔ Correcto";
+    fb.className = "feedback correct";
+  } else {
+    fb.textContent = `✘ Incorrecto — ${currentWord}`;
+    fb.className = "feedback incorrect";
+    errors.push(currentWord);
+  }
+
+  index++;
+  setTimeout(nextWord, 1000);
+}
+
+function endSession() {
+  document.getElementById("test").classList.add("hidden");
+  document.getElementById("end").classList.remove("hidden");
+
+  if (errors.length > 0) {
+    words = [...errors];
+    errors = [];
+    index = 0;
+  }
+}
+
+function restart() {
+  document.getElementById("end").classList.add("hidden");
+  document.getElementById("test").classList.remove("hidden");
+  nextWord();
+}
+
+function goHome() {
+  document.getElementById("end").classList.add("hidden");
+  document.getElementById("setup").classList.remove("hidden");
+}
+
+// ---------- INIT ----------
+loadWords();
+</script>
+
+</body>
+</html>
