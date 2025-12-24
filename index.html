@@ -34,7 +34,7 @@ input {
 button {
   width: 100%;
   padding: 12px;
-  margin-top: 15px;
+  margin-top: 10px;
   font-size: 16px;
   background: #2563eb;
   color: white;
@@ -45,6 +45,10 @@ button {
 
 button.secondary {
   background: #6b7280;
+}
+
+button.danger {
+  background: #dc2626;
 }
 
 button:hover {
@@ -80,9 +84,14 @@ button:hover {
 <!-- SETUP -->
 <div id="setup">
   <p>Introduce tus palabras:</p>
+
   <div id="wordInputs"></div>
+
   <button onclick="addWordInput()">➕ Añadir palabra</button>
-  <button onclick="startTest()">Empezar dictado</button>
+  <button class="secondary" onclick="removeLastInput()">➖ Quitar última palabra</button>
+  <button class="danger" onclick="clearAllInputs()">🧹 Limpiar todo</button>
+
+  <button onclick="startTest()">▶️ Empezar dictado</button>
 </div>
 
 <!-- TEST -->
@@ -109,35 +118,62 @@ let errors = [];
 let currentWord = "";
 let index = 0;
 
-// ---------- SETUP ----------
+/* ---------- UTIL ---------- */
+function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+}
+
+/* ---------- SETUP ---------- */
 function addWordInput(value = "") {
   const container = document.getElementById("wordInputs");
   const input = document.createElement("input");
   input.placeholder = "Ej: der Freund";
   input.value = value;
+  input.oninput = saveWords;
   container.appendChild(input);
   saveWords();
 }
 
+function removeLastInput() {
+  const container = document.getElementById("wordInputs");
+  if (container.children.length > 1) {
+    container.removeChild(container.lastChild);
+    saveWords();
+  }
+}
+
+function clearAllInputs() {
+  const container = document.getElementById("wordInputs");
+  container.innerHTML = "";
+  addWordInput("");
+}
+
 function saveWords() {
   const values = [...document.querySelectorAll("#wordInputs input")]
-    .map(i => i.value)
-    .filter(v => v.trim() !== "");
+    .map(i => i.value.trim())
+    .filter(v => v !== "");
   localStorage.setItem("germanWords", JSON.stringify(values));
 }
 
 function loadWords() {
   const saved = JSON.parse(localStorage.getItem("germanWords") || "[]");
-  if (saved.length === 0) addWordInput();
-  saved.forEach(w => addWordInput(w));
+  if (saved.length === 0) {
+    addWordInput("");
+  } else {
+    saved.forEach(w => addWordInput(w));
+  }
 }
 
-// ---------- TEST ----------
+/* ---------- TEST ---------- */
 function startTest() {
   saveWords();
   words = JSON.parse(localStorage.getItem("germanWords") || "[]");
   if (words.length === 0) return;
 
+  shuffle(words); // 🔥 RANDOM
   errors = [];
   index = 0;
 
@@ -148,11 +184,13 @@ function startTest() {
 }
 
 function playAudio() {
-  speechSynthesis.cancel(); // ← clave: corta cualquier voz previa
+  window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(currentWord);
   u.lang = "de-DE";
-  u.rate = 0.9; // un poco más claro para A1
-  speechSynthesis.speak(u);
+
+  setTimeout(() => {
+    window.speechSynthesis.speak(u);
+  }, 80);
 }
 
 function nextWord() {
@@ -160,11 +198,13 @@ function nextWord() {
     endSession();
     return;
   }
+
   currentWord = words[index];
   document.getElementById("answer").value = "";
   document.getElementById("feedback").textContent = "";
   document.getElementById("counter").textContent =
     `Palabra ${index + 1} de ${words.length}`;
+
   playAudio();
 }
 
@@ -182,7 +222,7 @@ function checkAnswer() {
   }
 
   index++;
-  setTimeout(nextWord, 1000);
+  setTimeout(nextWord, 900);
 }
 
 function endSession() {
@@ -191,6 +231,7 @@ function endSession() {
 
   if (errors.length > 0) {
     words = [...errors];
+    shuffle(words); // 🔥 RANDOM otra vez
     errors = [];
     index = 0;
   }
@@ -207,7 +248,7 @@ function goHome() {
   document.getElementById("setup").classList.remove("hidden");
 }
 
-// ---------- INIT ----------
+/* ---------- INIT ---------- */
 loadWords();
 </script>
 
