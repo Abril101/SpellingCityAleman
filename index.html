@@ -148,8 +148,10 @@ function startTest() {
 }
 
 function playAudio() {
+  speechSynthesis.cancel(); // ← clave: corta cualquier voz previa
   const u = new SpeechSynthesisUtterance(currentWord);
   u.lang = "de-DE";
+  u.rate = 0.9; // un poco más claro para A1
   speechSynthesis.speak(u);
 }
 
